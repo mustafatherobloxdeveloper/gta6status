@@ -1,0 +1,1651 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GTA VI Port Status — Live Telemetry</title>
+  <meta name="description" content="Live GTA VI port progress tracker with 60-second auto-refresh, milestone progression, and effort breakdown." />
+
+  <!-- Google Fonts: Outfit (display), Inter (UI body), JetBrains Mono (telemetry) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@500;600;700;800;900&display=swap" rel="stylesheet" />
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+            display: ['Outfit', 'Inter', 'system-ui', 'sans-serif'],
+            mono: ['JetBrains Mono', 'ui-monospace', 'SFMono-Regular', 'monospace'],
+          },
+          colors: {
+            obsidian: '#0b0d14',
+            midnight: '#111524',
+            neonPink: '#ff3b9a',
+            sunsetCoral: '#ff8a3d',
+            electricCyan: '#2de2e6',
+          },
+          boxShadow: {
+            'neon-pink': '0 0 24px -4px rgba(255, 59, 154, 0.45)',
+            'neon-cyan': '0 0 24px -4px rgba(45, 226, 230, 0.35)',
+            'glass': '0 20px 50px -20px rgba(0, 0, 0, 0.75)',
+          },
+        },
+      },
+    };
+  </script>
+</head>
+
+<body class="min-h-screen bg-[#0b0d14] text-slate-100 font-sans antialiased selection:bg-[#ff3b9a]/30 selection:text-white overflow-x-hidden relative">
+  <!-- Ambient Vice City Background Glows -->
+  <div aria-hidden="true" class="pointer-events-none fixed inset-0 overflow-hidden -z-10">
+    <div class="absolute -top-32 -left-24 w-[28rem] h-[28rem] rounded-full bg-[#ff3b9a]/15 blur-[130px]"></div>
+    <div class="absolute top-1/4 -right-24 w-[26rem] h-[26rem] rounded-full bg-[#2de2e6]/12 blur-[130px]"></div>
+    <div class="absolute bottom-0 left-1/3 w-[30rem] h-[24rem] rounded-full bg-[#ff8a3d]/10 blur-[140px]"></div>
+    <div class="absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.035)_1px,transparent_1px)] [background-size:28px_28px]"></div>
+  </div>
+
+  <!-- Sticky Top Telemetry Header -->
+  <header class="sticky top-0 z-40 border-b border-white/10 bg-[#0b0d14]/80 backdrop-blur-xl">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5">
+      <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+        <!-- Brand & Title -->
+        <div class="flex items-center justify-between gap-3">
+          <div class="flex items-center gap-3 min-w-0">
+            <div class="relative flex-shrink-0 w-10 h-10 rounded-xl bg-gradient-to-br from-[#ff3b9a] via-[#ff8a3d] to-[#2de2e6] p-[1.5px] shadow-neon-pink">
+              <div class="w-full h-full rounded-[10px] bg-[#0b0d14] flex items-center justify-center">
+                <span class="font-display font-black text-sm tracking-tight bg-gradient-to-r from-[#ff3b9a] via-[#ff8a3d] to-[#2de2e6] bg-clip-text text-transparent">VI</span>
+              </div>
+            </div>
+            <div class="min-w-0">
+              <div class="flex items-center gap-2 flex-wrap">
+                <h1 class="font-display font-extrabold text-lg sm:text-xl tracking-tight text-white truncate">
+                  GTA VI Port Status
+                </h1>
+                <!-- Live Source Status Pill -->
+                <span id="status-badge" class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-mono font-semibold tracking-wide border border-white/10 bg-white/5 text-slate-300">
+                  <span id="status-dot" class="w-2 h-2 rounded-full bg-slate-400 animate-pulse"></span>
+                  <span id="status-label">Connecting…</span>
+                </span>
+              </div>
+              <p class="text-xs text-slate-400 truncate">
+                Real-time community port telemetry &bull; <span class="font-mono text-slate-300">portwatch-vi.xyz</span>
+              </p>
+            </div>
+          </div>
+
+          <!-- Compact Mobile Refresh Button -->
+          <button
+            id="refresh-btn-mobile"
+            type="button"
+            class="lg:hidden inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-white bg-white/10 hover:bg-white/15 active:scale-95 border border-white/15 transition"
+            aria-label="Refresh telemetry now"
+          >
+            <svg id="refresh-icon-mobile" class="w-4 h-4 text-[#2de2e6]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            <span>Refresh</span>
+          </button>
+        </div>
+
+        <!-- Telemetry Timers & Controls -->
+        <div class="flex flex-wrap items-center justify-between lg:justify-end gap-2 sm:gap-3">
+          <div class="flex flex-wrap items-center gap-2 text-xs font-mono">
+            <!-- Relative Last Updated -->
+            <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/[0.04] border border-white/10 text-slate-200">
+              <svg class="w-3.5 h-3.5 text-[#ff3b9a] flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span id="last-updated-text">Waiting for first sync…</span>
+            </div>
+
+            <!-- Next Refresh Countdown Pill -->
+            <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/[0.04] border border-white/10 text-slate-300">
+              <span class="w-1.5 h-1.5 rounded-full bg-[#2de2e6]"></span>
+              <span id="countdown-text">Next refresh in 60s</span>
+            </div>
+          </div>
+
+          <!-- Desktop Refresh Button -->
+          <button
+            id="refresh-btn"
+            type="button"
+            class="hidden lg:inline-flex items-center justify-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold text-white bg-gradient-to-r from-[#ff3b9a]/20 to-[#2de2e6]/20 hover:from-[#ff3b9a]/35 hover:to-[#2de2e6]/35 active:scale-95 border border-white/15 transition shadow-sm"
+          >
+            <svg id="refresh-icon" class="w-3.5 h-3.5 text-[#2de2e6]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            <span>Refresh</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Thin 60-Second Auto-Refresh Progress Strip -->
+    <div class="w-full h-[2px] bg-white/5 overflow-hidden">
+      <div id="countdown-bar" class="h-full w-full bg-gradient-to-r from-[#ff3b9a] via-[#ff8a3d] to-[#2de2e6] transition-all duration-1000 ease-linear"></div>
+    </div>
+  </header>
+
+  <!-- Main Content Container -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6">
+
+    <!-- Error / Offline Banner (Hidden unless all live fetches fail) -->
+    <section id="error-banner" class="hidden rounded-2xl border border-rose-500/35 bg-rose-950/30 backdrop-blur-xl p-4 sm:p-5 shadow-glass">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div class="flex items-start gap-3">
+          <div class="mt-0.5 flex-shrink-0 w-9 h-9 rounded-xl bg-rose-500/20 border border-rose-500/30 flex items-center justify-center text-rose-300">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+            </svg>
+          </div>
+          <div class="space-y-1">
+            <h2 class="font-display font-bold text-sm sm:text-base text-rose-200">
+              Unable to reach live telemetry endpoint
+            </h2>
+            <p id="error-details" class="text-xs sm:text-sm text-rose-200/80 leading-relaxed">
+              Direct fetch and CORS fallback proxies failed. Auto-retry remains active every 60 seconds.
+            </p>
+          </div>
+        </div>
+        <div class="flex flex-wrap items-center gap-2.5 flex-shrink-0">
+          <button
+            id="retry-now-btn"
+            type="button"
+            class="px-4 py-2 rounded-xl text-xs font-semibold text-white bg-rose-500 hover:bg-rose-400 active:scale-95 transition shadow-sm"
+          >
+            Retry Now
+          </button>
+          <button
+            id="load-sample-btn"
+            type="button"
+            class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-100 bg-white/10 hover:bg-white/15 active:scale-95 border border-white/15 transition"
+          >
+            Load Sample Data
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Demo Mode Banner (Shown only when user explicitly activates Sample Data) -->
+    <section id="demo-banner" class="hidden rounded-2xl border border-[#ff3b9a]/35 bg-[#ff3b9a]/10 backdrop-blur-xl px-4 py-3.5">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div class="flex items-center gap-2.5 text-xs sm:text-sm text-pink-100">
+          <span class="inline-flex items-center justify-center px-2 py-0.5 rounded-md bg-[#ff3b9a]/30 border border-[#ff3b9a]/40 font-mono text-[11px] font-bold uppercase tracking-wider text-white">Demo</span>
+          <span>Viewing offline sample telemetry for UI testing. Live endpoint auto-reconnect is still running every 60s.</span>
+        </div>
+        <button
+          id="demo-reconnect-btn"
+          type="button"
+          class="self-start sm:self-auto px-3.5 py-1.5 rounded-xl text-xs font-semibold text-white bg-[#ff3b9a] hover:bg-[#ff56a8] active:scale-95 transition"
+        >
+          Try Live Endpoint
+        </button>
+      </div>
+    </section>
+
+    <!-- Hero Progress Panel -->
+    <section class="relative overflow-hidden rounded-3xl border border-white/10 bg-[#111524]/75 backdrop-blur-xl p-5 sm:p-7 lg:p-8 shadow-glass">
+      <!-- Subtle decorative corner gradient -->
+      <div aria-hidden="true" class="pointer-events-none absolute -top-24 -right-24 w-72 h-72 rounded-full bg-gradient-to-br from-[#ff3b9a]/20 via-[#ff8a3d]/10 to-transparent blur-3xl"></div>
+
+      <div class="relative z-10 flex flex-col lg:flex-row lg:items-end justify-between gap-6">
+        <div class="space-y-3">
+          <div class="flex flex-wrap items-center gap-2.5">
+            <span class="text-xs font-mono uppercase tracking-[0.2em] text-slate-400">Overall Port Completion</span>
+            <span id="hero-milestone-badge" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono font-bold uppercase tracking-wider bg-[#2de2e6]/15 text-[#2de2e6] border border-[#2de2e6]/30">
+              LOADING
+            </span>
+          </div>
+
+          <div class="flex items-baseline gap-3 flex-wrap">
+            <span class="text-sm sm:text-base font-medium text-slate-400">Percentage Done:</span>
+            <div id="hero-percentage" class="font-display font-black text-5xl sm:text-6xl lg:text-7xl tracking-tight bg-gradient-to-r from-white via-[#ff8a3d] to-[#ff3b9a] bg-clip-text text-transparent leading-none">
+              --.-%
+            </div>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-sm text-slate-300">
+            <div class="flex items-center gap-2">
+              <span class="text-slate-400">Leading Effort:</span>
+              <span id="hero-leader-name" class="font-semibold text-white">—</span>
+            </div>
+            <span id="hero-leader-stars" class="hidden inline-flex items-center gap-1 font-mono text-xs text-amber-300 bg-amber-400/10 border border-amber-400/20 px-2 py-0.5 rounded-lg">
+              ★ 0
+            </span>
+            <span id="hero-feed-updated" class="hidden font-mono text-xs text-slate-400"></span>
+          </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="flex flex-wrap items-center gap-2.5">
+          <button
+            id="copy-summary-btn"
+            type="button"
+            class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-200 bg-white/[0.06] hover:bg-white/[0.12] active:scale-95 border border-white/10 transition"
+          >
+            <svg class="w-3.5 h-3.5 text-[#ff8a3d]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+            </svg>
+            <span id="copy-summary-label">Copy Status</span>
+          </button>
+          <a
+            href="https://portwatch-vi.xyz/data/tracker.json"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-200 bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 transition"
+          >
+            <span>Raw JSON</span>
+            <svg class="w-3.5 h-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+            </svg>
+          </a>
+        </div>
+      </div>
+
+      <!-- Graduated Milestone Progress Bar (0% to 100%) -->
+      <div class="relative z-10 mt-8 pt-2">
+        <div class="flex items-center justify-between text-[11px] font-mono text-slate-400 mb-2">
+          <span>MILESTONE PROGRESSION (0% — 100%)</span>
+          <span id="hero-next-milestone" class="text-slate-300">Calculating next milestone…</span>
+        </div>
+
+        <!-- Bar Track -->
+        <div class="relative h-5 rounded-full bg-slate-900/90 border border-white/10 p-1 overflow-visible">
+          <!-- Fill Bar -->
+          <div
+            id="hero-progress-fill"
+            class="h-full rounded-full bg-gradient-to-r from-[#2de2e6] via-[#ff8a3d] to-[#ff3b9a] transition-all duration-700 ease-out relative"
+            style="width: 0%"
+          >
+            <div class="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 w-3.5 h-3.5 rounded-full bg-white shadow-neon-pink ring-4 ring-[#ff3b9a]/35"></div>
+          </div>
+
+          <!-- Vertical Tick Markers inside track -->
+          <div id="milestone-ticks-track" class="pointer-events-none absolute inset-0"></div>
+        </div>
+
+        <!-- Labeled Milestone Ticks (Proportional on md+, clean grid pills on mobile) -->
+        <div id="milestone-ticks-desktop" class="hidden md:block relative h-12 mt-2"></div>
+        <div id="milestone-pills-mobile" class="grid grid-cols-4 sm:grid-cols-7 gap-1.5 mt-3 md:hidden"></div>
+      </div>
+    </section>
+
+    <!-- Summary Stat Cards (4 Cards) -->
+    <section class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+      <!-- Card 1: Leading Progress -->
+      <div class="rounded-2xl border border-white/10 bg-[#111524]/70 backdrop-blur-xl p-4 sm:p-5 hover:border-[#ff3b9a]/40 transition">
+        <div class="flex items-center justify-between gap-2 mb-2">
+          <span class="text-xs font-medium text-slate-400">Leading Progress</span>
+          <span class="w-2 h-2 rounded-full bg-[#ff3b9a]"></span>
+        </div>
+        <div id="stat-leader-score" class="font-display font-extrabold text-2xl sm:text-3xl text-white tracking-tight">--.-%</div>
+        <p class="mt-1 text-[11px] font-mono text-slate-400">Top active effort</p>
+      </div>
+
+      <!-- Card 2: Top 3 Average -->
+      <div class="rounded-2xl border border-white/10 bg-[#111524]/70 backdrop-blur-xl p-4 sm:p-5 hover:border-[#ff8a3d]/40 transition">
+        <div class="flex items-center justify-between gap-2 mb-2">
+          <span class="text-xs font-medium text-slate-400">Top 3 Average</span>
+          <span class="w-2 h-2 rounded-full bg-[#ff8a3d]"></span>
+        </div>
+        <div id="stat-top3-avg" class="font-display font-extrabold text-2xl sm:text-3xl text-white tracking-tight">--.-%</div>
+        <p class="mt-1 text-[11px] font-mono text-slate-400">Mean of top 3 ports</p>
+      </div>
+
+      <!-- Card 3: Active Efforts -->
+      <div class="rounded-2xl border border-white/10 bg-[#111524]/70 backdrop-blur-xl p-4 sm:p-5 hover:border-[#2de2e6]/40 transition">
+        <div class="flex items-center justify-between gap-2 mb-2">
+          <span class="text-xs font-medium text-slate-400">Active Efforts</span>
+          <span class="w-2 h-2 rounded-full bg-[#2de2e6]"></span>
+        </div>
+        <div id="stat-active-count" class="font-display font-extrabold text-2xl sm:text-3xl text-white tracking-tight">--</div>
+        <p class="mt-1 text-[11px] font-mono text-slate-400">Non-nuked projects</p>
+      </div>
+
+      <!-- Card 4: Leader Stage -->
+      <div class="rounded-2xl border border-white/10 bg-[#111524]/70 backdrop-blur-xl p-4 sm:p-5 hover:border-purple-400/40 transition">
+        <div class="flex items-center justify-between gap-2 mb-2">
+          <span class="text-xs font-medium text-slate-400">Leader Stage</span>
+          <span class="w-2 h-2 rounded-full bg-purple-400"></span>
+        </div>
+        <div id="stat-leader-stage" class="font-display font-extrabold text-2xl sm:text-3xl text-white uppercase tracking-tight truncate">—</div>
+        <p id="stat-leader-stage-sub" class="mt-1 text-[11px] font-mono text-slate-400">Milestone reached</p>
+      </div>
+    </section>
+
+    <!-- Leader / Selected Effort Breakdown Panel -->
+    <section id="breakdown-section" class="space-y-4">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <div class="flex items-center gap-2.5 flex-wrap">
+          <h2 class="font-display font-bold text-lg sm:text-xl text-white">Effort Telemetry Breakdown</h2>
+          <span id="breakdown-target-pill" class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-mono font-semibold bg-[#ff3b9a]/15 text-[#ff3b9a] border border-[#ff3b9a]/30">
+            #1 Leader
+          </span>
+        </div>
+        <div class="flex items-center gap-2">
+          <span id="breakdown-effort-name" class="text-xs sm:text-sm font-mono text-slate-300">—</span>
+          <button
+            id="reset-leader-btn"
+            type="button"
+            class="hidden px-2.5 py-1 rounded-lg text-[11px] font-semibold text-[#2de2e6] bg-[#2de2e6]/10 hover:bg-[#2de2e6]/20 border border-[#2de2e6]/30 transition"
+          >
+            Back to Leader
+          </button>
+        </div>
+      </div>
+
+      <!-- Ladder Stepper Strip for Inspected Effort -->
+      <div class="rounded-2xl border border-white/10 bg-[#111524]/65 backdrop-blur-xl p-4">
+        <div class="flex items-center justify-between gap-2 mb-3">
+          <span class="text-xs font-mono uppercase tracking-wider text-slate-400">Boot & Playability Ladder (10% — 50%)</span>
+          <span id="breakdown-score-pill" class="font-mono text-xs font-semibold text-white bg-white/10 px-2.5 py-0.5 rounded-lg">0.0%</span>
+        </div>
+        <div id="ladder-stepper" class="grid grid-cols-2 sm:grid-cols-5 gap-2.5"></div>
+      </div>
+
+      <!-- Side-by-Side Groundwork & Playability Quality Cards -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5">
+        <!-- Left Card: Groundwork Sub-tracks -->
+        <div class="rounded-3xl border border-white/10 bg-[#111524]/75 backdrop-blur-xl p-5 sm:p-6 shadow-glass flex flex-col justify-between">
+          <div>
+            <div class="flex items-start justify-between gap-3 mb-5">
+              <div>
+                <h3 class="font-display font-bold text-base sm:text-lg text-white">Groundwork Sub-Tracks</h3>
+                <p class="text-xs text-slate-400 mt-0.5">Weighted foundation contributing up to 10.0% before Loads</p>
+              </div>
+              <div class="text-right flex-shrink-0">
+                <div id="gw-total-pct" class="font-mono font-bold text-lg text-[#2de2e6]">0%</div>
+                <div id="gw-points-text" class="font-mono text-[11px] text-slate-400">0.0 / 10 pts</div>
+              </div>
+            </div>
+            <div id="groundwork-tracks-list" class="space-y-4"></div>
+          </div>
+
+          <div class="mt-5 pt-4 border-t border-white/10 flex items-center justify-between text-xs font-mono text-slate-400">
+            <span>Formula: 10 &times; &Sigma;(weight &times; progress)</span>
+            <span class="text-slate-300">Weights sum to 100%</span>
+          </div>
+        </div>
+
+        <!-- Right Card: Playability / Quality Tracks -->
+        <div class="rounded-3xl border border-white/10 bg-[#111524]/75 backdrop-blur-xl p-5 sm:p-6 shadow-glass flex flex-col justify-between">
+          <div>
+            <div class="flex items-start justify-between gap-3 mb-5">
+              <div>
+                <div class="flex items-center gap-2 flex-wrap">
+                  <h3 class="font-display font-bold text-base sm:text-lg text-white">Playability & Quality Tracks</h3>
+                  <span id="quality-active-badge" class="px-2 py-0.5 rounded-md text-[10px] font-mono font-semibold uppercase tracking-wide bg-white/10 text-slate-300 border border-white/10">
+                    Unlocks at Playable
+                  </span>
+                </div>
+                <p class="text-xs text-slate-400 mt-0.5">Drives score from 50.0% (Playable) to 100.0% (Complete)</p>
+              </div>
+              <div class="text-right flex-shrink-0">
+                <div id="quality-total-pct" class="font-mono font-bold text-lg text-[#ff3b9a]">0%</div>
+                <div id="quality-points-text" class="font-mono text-[11px] text-slate-400">+0.0 / 50 pts</div>
+              </div>
+            </div>
+            <div id="quality-tracks-list" class="space-y-4"></div>
+          </div>
+
+          <div class="mt-5 pt-4 border-t border-white/10 flex items-center justify-between text-xs font-mono text-slate-400">
+            <span>Perf normalized to 30 FPS target</span>
+            <span id="quality-stability-raw" class="text-slate-300">Stability: —</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- All Tracked Efforts Leaderboard -->
+    <section class="rounded-3xl border border-white/10 bg-[#111524]/75 backdrop-blur-xl shadow-glass overflow-hidden">
+      <div class="p-5 sm:p-6 border-b border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <div class="flex items-center gap-2.5">
+            <h2 class="font-display font-bold text-lg sm:text-xl text-white">Tracked Efforts Leaderboard</h2>
+            <span id="leaderboard-count-pill" class="px-2.5 py-0.5 rounded-full text-xs font-mono font-semibold bg-white/10 text-slate-200">0</span>
+          </div>
+          <p class="text-xs text-slate-400 mt-0.5">Ranked by overall port score, then GitHub stars. Click any effort to inspect its breakdown.</p>
+        </div>
+
+        <!-- Search Filter -->
+        <div class="relative w-full sm:w-64">
+          <svg class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z" />
+          </svg>
+          <input
+            id="effort-search"
+            type="text"
+            placeholder="Filter efforts…"
+            class="w-full pl-9 pr-3 py-2 rounded-xl text-xs sm:text-sm bg-[#0b0d14]/80 border border-white/10 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-[#2de2e6]/60 focus:ring-2 focus:ring-[#2de2e6]/20 transition"
+          />
+        </div>
+      </div>
+
+      <!-- Desktop Table View -->
+      <div class="hidden md:block overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="border-b border-white/10 text-[11px] font-mono uppercase tracking-wider text-slate-400 bg-white/[0.02]">
+              <th class="py-3.5 pl-6 pr-3 w-16">Rank</th>
+              <th class="py-3.5 px-3">Effort / Project</th>
+              <th class="py-3.5 px-3">Stage</th>
+              <th class="py-3.5 px-3 text-right">FPS</th>
+              <th class="py-3.5 px-3 text-right">Stars</th>
+              <th class="py-3.5 pl-3 pr-6 w-56 text-right">Progress Score</th>
+            </tr>
+          </thead>
+          <tbody id="leaderboard-table-body" class="divide-y divide-white/[0.06] text-sm"></tbody>
+        </table>
+      </div>
+
+      <!-- Mobile Card List View -->
+      <div id="leaderboard-mobile-list" class="md:hidden divide-y divide-white/[0.08]"></div>
+
+      <!-- Empty / Loading State -->
+      <div id="leaderboard-empty" class="hidden py-12 px-6 text-center text-sm text-slate-400">
+        No matching active efforts found.
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="mt-10 border-t border-white/10 bg-[#0b0d14]/70 backdrop-blur-md">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-400">
+      <p class="text-center sm:text-left">
+        Port Progress Tracker &bull; Algorithm by <span class="text-slate-200 font-medium">Mustafa Aldaher</span> &bull; Data source:
+        <a href="https://portwatch-vi.xyz" target="_blank" rel="noopener noreferrer" class="text-[#2de2e6] hover:underline font-mono">portwatch-vi.xyz</a>
+      </p>
+      <div class="flex items-center gap-4 font-mono">
+        <a
+          href="https://portwatch-vi.xyz/data/tracker.json"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="text-slate-300 hover:text-[#ff3b9a] transition"
+        >
+          tracker.json &nearr;
+        </a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Toast Notification -->
+  <div
+    id="toast"
+    role="status"
+    aria-live="polite"
+    class="pointer-events-none fixed bottom-5 right-5 z-50 translate-y-4 opacity-0 transition-all duration-300 rounded-xl border border-[#2de2e6]/35 bg-[#111524]/95 backdrop-blur-xl px-4 py-2.5 text-xs font-mono text-slate-100 shadow-neon-cyan"
+  ></div>
+
+  <!-- Application Script -->
+  <script>
+    (function () {
+      "use strict";
+
+      /* =========================================================================
+       * 1. CONSTANTS & EXACT SCORING CONFIGURATION (Ported from Python Script)
+       * ========================================================================= */
+      const DATA_URL = "https://portwatch-vi.xyz/data/tracker.json";
+      const REFRESH_INTERVAL_SEC = 60;
+      const FETCH_TIMEOUT_MS = 9000;
+
+      const MILESTONES = [
+        { key: "groundwork", at: 0, label: "Groundwork", short: "GW" },
+        { key: "loads", at: 10, label: "Loads", short: "Loads" },
+        { key: "boots", at: 20, label: "Boots", short: "Boots" },
+        { key: "menu", at: 30, label: "Menu", short: "Menu" },
+        { key: "world", at: 40, label: "World", short: "World" },
+        { key: "playable", at: 50, label: "Playable", short: "Play" },
+        { key: "complete", at: 100, label: "Complete", short: "Done" },
+      ];
+
+      const TRACKS = [
+        { key: "story", weight: 0.35, label: "Story", desc: "Campaign & mission completion", color: "from-[#ff3b9a] to-[#ff6eb4]" },
+        { key: "render", weight: 0.25, label: "Render", desc: "Visual & lighting parity", color: "from-[#ff8a3d] to-[#ffb36b]" },
+        { key: "perf", weight: 0.20, label: "Perf (30 FPS)", desc: "Framerate normalized to 30 FPS", color: "from-[#2de2e6] to-[#6df0f3]" },
+        { key: "stability", weight: 0.20, label: "Stability", desc: "Crash resilience rating", color: "from-violet-400 to-fuchsia-400" },
+      ];
+
+      const GROUNDWORK = [
+        { key: "loader", weight: 0.20, label: "Loader", desc: "Binary & executable loading" },
+        { key: "shaders", weight: 0.28, label: "Shaders", desc: "Shader translation pipeline" },
+        { key: "graphics", weight: 0.32, label: "Graphics", desc: "GPU backend & rendering API" },
+        { key: "proven", weight: 0.20, label: "Proven", desc: "Verified public proof & builds" },
+      ];
+
+      const STABILITY_MAP = {
+        unknown: 0.0,
+        constant: 0.0,
+        often: 0.25,
+        sometimes: 0.55,
+        rarely: 0.8,
+        stable: 1.0,
+      };
+
+      const TICK = Object.fromEntries(MILESTONES.map((m) => [m.key, m.at]));
+      const LADDER = ["loads", "boots", "menu", "world", "playable"];
+
+      const STAGE_STYLES = {
+        groundwork: "bg-slate-500/15 text-slate-300 border-slate-400/30",
+        loads: "bg-sky-500/15 text-sky-300 border-sky-400/30",
+        boots: "bg-cyan-500/15 text-[#2de2e6] border-[#2de2e6]/30",
+        menu: "bg-amber-500/15 text-amber-300 border-amber-400/30",
+        world: "bg-orange-500/15 text-[#ff8a3d] border-[#ff8a3d]/35",
+        playable: "bg-pink-500/15 text-[#ff3b9a] border-[#ff3b9a]/35",
+        complete: "bg-emerald-500/15 text-emerald-300 border-emerald-400/35",
+      };
+
+      /* =========================================================================
+       * 2. EXACT SCORING FUNCTIONS
+       * ========================================================================= */
+      function clamp01(v) {
+        if (v === null || v === undefined || v === "") return 0.0;
+        const num = Number(v);
+        if (!Number.isFinite(num)) return 0.0;
+        return Math.max(0.0, Math.min(1.0, num));
+      }
+
+      function ladderValue(v) {
+        if (v === true) return 1;
+        if (v === false || v === null || v === undefined) return 0;
+        return clamp01(v);
+      }
+
+      function groundworkFraction(gw) {
+        if (!gw || typeof gw !== "object") return 0.0;
+        let total = 0.0;
+        for (const g of GROUNDWORK) {
+          total += g.weight * clamp01(gw[g.key] ?? 0);
+        }
+        return total;
+      }
+
+      function trackValues(gta) {
+        const safeGta = gta && typeof gta === "object" ? gta : {};
+        const stab = safeGta.stability;
+        const stabVal =
+          typeof stab === "number"
+            ? clamp01(stab)
+            : (Object.prototype.hasOwnProperty.call(STABILITY_MAP, stab) ? STABILITY_MAP[stab] : 0.0);
+
+        return {
+          story: clamp01(safeGta.story),
+          render: clamp01(safeGta.render),
+          perf: clamp01((Number(safeGta.fps) || 0) / 30),
+          stability: stabVal,
+        };
+      }
+
+      function scoreEffort(effort) {
+        const gwObj = effort?.groundwork || {};
+        const gw = groundworkFraction(gwObj);
+        const gta = effort?.gta || {};
+
+        let score = TICK.loads * gw;
+        let reached = "groundwork";
+        let prev = score;
+
+        for (const key of LADDER) {
+          const v = ladderValue(gta[key]);
+          if (v >= 1) {
+            score = TICK[key];
+            prev = score;
+            reached = key;
+            continue;
+          }
+          if (v > 0) {
+            score = Math.max(score, prev + v * (TICK[key] - prev));
+          }
+          break;
+        }
+
+        const tv = trackValues(gta);
+        const quality = TRACKS.reduce((sum, t) => sum + t.weight * tv[t.key], 0);
+
+        if (reached === "playable") {
+          score = TICK.playable + quality * (TICK.complete - TICK.playable);
+          if (quality >= 1) {
+            reached = "complete";
+          }
+        }
+
+        return {
+          score: Math.round(score * 10) / 10,
+          reached,
+          gw,
+          tv,
+          quality,
+        };
+      }
+
+      function overall(efforts) {
+        const list = Array.isArray(efforts) ? efforts : [];
+        const scored = [];
+
+        for (const e of list) {
+          if (!e || e.nuked) continue;
+          const res = scoreEffort(e);
+          const stars = Number(e?.stats?.stars) || 0;
+          scored.push({
+            effort: e,
+            score: res.score,
+            reached: res.reached,
+            stars,
+            gw: res.gw,
+            tv: res.tv,
+            quality: res.quality,
+          });
+        }
+
+        scored.sort((a, b) => {
+          if (b.score !== a.score) return b.score - a.score;
+          return b.stars - a.stars;
+        });
+
+        const top = scored.slice(0, 3);
+        const leader = scored.length > 0 ? scored[0] : null;
+        const top3 = top.length
+          ? Math.round((top.reduce((acc, item) => acc + item.score, 0) / top.length) * 10) / 10
+          : 0;
+
+        return {
+          score: leader ? leader.score : 0,
+          leader,
+          top3,
+          count: scored.length,
+          scored,
+        };
+      }
+
+      /* =========================================================================
+       * 3. SAMPLE DATA (Strictly Offline Demo Mode Only — Never Silently Shown)
+       * ========================================================================= */
+      const SAMPLE_DATA = {
+        updatedAt: new Date().toISOString(),
+        efforts: [
+          {
+            id: "vice-recomp",
+            name: "ViceRecomp",
+            description: "Static recompilation runtime & D3D12/Vulkan translation layer",
+            url: "https://github.com/example/vicerecomp",
+            stats: { stars: 4820 },
+            groundwork: { loader: 1.0, shaders: 0.92, graphics: 0.88, proven: 1.0 },
+            gta: {
+              loads: true,
+              boots: true,
+              menu: true,
+              world: 0.65,
+              playable: false,
+              story: 0.12,
+              render: 0.48,
+              fps: 19,
+              stability: "often",
+            },
+          },
+          {
+            id: "leonida-emu",
+            name: "LeonidaX",
+            description: "High-level console compatibility layer with custom shader cache",
+            url: "https://github.com/example/leonidax",
+            stats: { stars: 3190 },
+            groundwork: { loader: 1.0, shaders: 0.85, graphics: 0.80, proven: 0.9 },
+            gta: {
+              loads: true,
+              boots: true,
+              menu: 0.45,
+              world: false,
+              playable: false,
+              story: 0.0,
+              render: 0.30,
+              fps: 14,
+              stability: "often",
+            },
+          },
+          {
+            id: "sunshine-rt",
+            name: "SunshineRT",
+            description: "Experimental Vulkan compute pipeline & asset streamer",
+            url: "https://github.com/example/sunshinert",
+            stats: { stars: 1640 },
+            groundwork: { loader: 1.0, shaders: 0.72, graphics: 0.64, proven: 0.8 },
+            gta: {
+              loads: true,
+              boots: 0.55,
+              menu: false,
+              world: false,
+              playable: false,
+              story: 0.0,
+              render: 0.15,
+              fps: 8,
+              stability: "constant",
+            },
+          },
+          {
+            id: "rage9-bridge",
+            name: "RAGE9-Bridge",
+            description: "Open-source loader & shader decompiler groundwork",
+            stats: { stars: 790 },
+            groundwork: { loader: 0.95, shaders: 0.60, graphics: 0.50, proven: 0.75 },
+            gta: {
+              loads: 0.4,
+              boots: false,
+              menu: false,
+              world: false,
+              playable: false,
+              fps: 0,
+              stability: "unknown",
+            },
+          },
+          {
+            id: "nuked-example",
+            name: "ArchivedStub",
+            nuked: true,
+            stats: { stars: 9999 },
+            groundwork: { loader: 1, shaders: 1, graphics: 1, proven: 1 },
+            gta: { loads: true, boots: true, menu: true, world: true, playable: true, story: 1, render: 1, fps: 60, stability: "stable" },
+          },
+        ],
+      };
+
+      /* =========================================================================
+       * 4. APPLICATION STATE
+       * ========================================================================= */
+      const state = {
+        mode: "loading", // 'live' | 'proxy' | 'error' | 'demo' | 'loading'
+        proxyName: "",
+        rawData: null,
+        results: null,
+        selectedEffortKey: null, // null means follow #1 leader
+        searchQuery: "",
+        lastUpdatedAt: null, // Date.now() of last successful data render
+        nextRefreshAt: Date.now() + REFRESH_INTERVAL_SEC * 1000,
+        isFetching: false,
+        lastErrorMsg: "",
+      };
+
+      /* =========================================================================
+       * 5. DOM ELEMENT REFERENCES
+       * ========================================================================= */
+      const el = {
+        statusBadge: document.getElementById("status-badge"),
+        statusDot: document.getElementById("status-dot"),
+        statusLabel: document.getElementById("status-label"),
+        lastUpdatedText: document.getElementById("last-updated-text"),
+        countdownText: document.getElementById("countdown-text"),
+        countdownBar: document.getElementById("countdown-bar"),
+        refreshBtn: document.getElementById("refresh-btn"),
+        refreshBtnMobile: document.getElementById("refresh-btn-mobile"),
+        refreshIcon: document.getElementById("refresh-icon"),
+        refreshIconMobile: document.getElementById("refresh-icon-mobile"),
+
+        errorBanner: document.getElementById("error-banner"),
+        errorDetails: document.getElementById("error-details"),
+        retryNowBtn: document.getElementById("retry-now-btn"),
+        loadSampleBtn: document.getElementById("load-sample-btn"),
+        demoBanner: document.getElementById("demo-banner"),
+        demoReconnectBtn: document.getElementById("demo-reconnect-btn"),
+
+        heroPercentage: document.getElementById("hero-percentage"),
+        heroMilestoneBadge: document.getElementById("hero-milestone-badge"),
+        heroLeaderName: document.getElementById("hero-leader-name"),
+        heroLeaderStars: document.getElementById("hero-leader-stars"),
+        heroFeedUpdated: document.getElementById("hero-feed-updated"),
+        heroNextMilestone: document.getElementById("hero-next-milestone"),
+        heroProgressFill: document.getElementById("hero-progress-fill"),
+        milestoneTicksTrack: document.getElementById("milestone-ticks-track"),
+        milestoneTicksDesktop: document.getElementById("milestone-ticks-desktop"),
+        milestonePillsMobile: document.getElementById("milestone-pills-mobile"),
+
+        statLeaderScore: document.getElementById("stat-leader-score"),
+        statTop3Avg: document.getElementById("stat-top3-avg"),
+        statActiveCount: document.getElementById("stat-active-count"),
+        statLeaderStage: document.getElementById("stat-leader-stage"),
+        statLeaderStageSub: document.getElementById("stat-leader-stage-sub"),
+
+        breakdownSection: document.getElementById("breakdown-section"),
+        breakdownTargetPill: document.getElementById("breakdown-target-pill"),
+        breakdownEffortName: document.getElementById("breakdown-effort-name"),
+        resetLeaderBtn: document.getElementById("reset-leader-btn"),
+        breakdownScorePill: document.getElementById("breakdown-score-pill"),
+        ladderStepper: document.getElementById("ladder-stepper"),
+        gwTotalPct: document.getElementById("gw-total-pct"),
+        gwPointsText: document.getElementById("gw-points-text"),
+        groundworkTracksList: document.getElementById("groundwork-tracks-list"),
+        qualityActiveBadge: document.getElementById("quality-active-badge"),
+        qualityTotalPct: document.getElementById("quality-total-pct"),
+        qualityPointsText: document.getElementById("quality-points-text"),
+        qualityTracksList: document.getElementById("quality-tracks-list"),
+        qualityStabilityRaw: document.getElementById("quality-stability-raw"),
+
+        leaderboardCountPill: document.getElementById("leaderboard-count-pill"),
+        effortSearch: document.getElementById("effort-search"),
+        leaderboardTableBody: document.getElementById("leaderboard-table-body"),
+        leaderboardMobileList: document.getElementById("leaderboard-mobile-list"),
+        leaderboardEmpty: document.getElementById("leaderboard-empty"),
+
+        copySummaryBtn: document.getElementById("copy-summary-btn"),
+        copySummaryLabel: document.getElementById("copy-summary-label"),
+        toast: document.getElementById("toast"),
+      };
+
+      /* =========================================================================
+       * 6. DEFENSIVE FIELD HELPERS & FORMATTING
+       * ========================================================================= */
+      function escapeHtml(str) {
+        return String(str ?? "")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#39;");
+      }
+
+      function getEffortKey(effort, index) {
+        return String(effort?.id || effort?.slug || effort?.repo || effort?.name || effort?.title || `effort-${index}`);
+      }
+
+      function getEffortName(effort) {
+        return effort?.name || effort?.title || effort?.project || effort?.repo || effort?.id || "Unnamed Effort";
+      }
+
+      function getEffortUrl(effort) {
+        const candidate =
+          effort?.url ||
+          effort?.repoUrl ||
+          effort?.repo_url ||
+          effort?.github ||
+          effort?.homepage ||
+          effort?.links?.github ||
+          effort?.links?.repo ||
+          effort?.links?.homepage ||
+          (typeof effort?.repo === "string" && effort.repo.includes("/") && !effort.repo.startsWith("http")
+            ? `https://github.com/${effort.repo}`
+            : null);
+
+        if (typeof candidate === "string" && /^https?:\/\//i.test(candidate.trim())) {
+          return candidate.trim();
+        }
+        return null;
+      }
+
+      function getEffortSubtitle(effort) {
+        return effort?.description || effort?.summary || effort?.notes || effort?.author || effort?.platform || "";
+      }
+
+      function formatScore(val) {
+        const num = Number(val);
+        return Number.isFinite(num) ? num.toFixed(1) : "0.0";
+      }
+
+      function formatPercent01(val) {
+        return `${Math.round(clamp01(val) * 100)}%`;
+      }
+
+      function formatStars(stars) {
+        const n = Number(stars) || 0;
+        if (n >= 1000) return `${(n / 1000).toFixed(1).replace(/\.0$/, "")}k`;
+        return String(n);
+      }
+
+      function formatRelativeTime(timestampMs) {
+        if (!timestampMs) return "Not synced yet";
+        const diffSec = Math.max(0, Math.floor((Date.now() - timestampMs) / 1000));
+        if (diffSec < 3) return "Updated just now";
+        if (diffSec < 60) return `Updated ${diffSec} second${diffSec === 1 ? "" : "s"} ago`;
+        const diffMin = Math.floor(diffSec / 60);
+        if (diffMin < 60) return `Updated ${diffMin} minute${diffMin === 1 ? "" : "s"} ago`;
+        const diffHr = Math.floor(diffMin / 60);
+        return `Updated ${diffHr} hour${diffHr === 1 ? "" : "s"} ago`;
+      }
+
+      let toastTimer = null;
+      function showToast(message) {
+        el.toast.textContent = message;
+        el.toast.classList.remove("opacity-0", "translate-y-4");
+        el.toast.classList.add("opacity-100", "translate-y-0");
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => {
+          el.toast.classList.add("opacity-0", "translate-y-4");
+          el.toast.classList.remove("opacity-100", "translate-y-0");
+        }, 2600);
+      }
+
+      /* =========================================================================
+       * 7. NETWORK FETCHING WITH SEQUENTIAL CORS PROXY FALLBACKS
+       * ========================================================================= */
+      async function fetchJsonWithTimeout(url, timeoutMs) {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), timeoutMs);
+        try {
+          const response = await fetch(url, {
+            cache: "no-store",
+            signal: controller.signal,
+            headers: { Accept: "application/json, text/plain, */*" },
+          });
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status} ${response.statusText}`);
+          }
+          const text = await response.text();
+          let parsed;
+          try {
+            parsed = JSON.parse(text);
+          } catch (parseErr) {
+            throw new Error("Invalid JSON response");
+          }
+          if (!parsed || typeof parsed !== "object" || !Array.isArray(parsed.efforts)) {
+            throw new Error("Unexpected JSON schema (missing efforts array)");
+          }
+          return parsed;
+        } finally {
+          clearTimeout(timer);
+        }
+      }
+
+      async function fetchTrackerData(options = {}) {
+        const { manual = false } = options;
+        if (state.isFetching) return;
+
+        state.isFetching = true;
+        setRefreshingVisual(true);
+
+        const attempts = [
+          {
+            label: "Direct",
+            mode: "live",
+            url: DATA_URL,
+          },
+          {
+            label: "AllOrigins",
+            mode: "proxy",
+            url: `https://api.allorigins.win/raw?url=${encodeURIComponent(DATA_URL)}`,
+          },
+          {
+            label: "CorsProxy.io",
+            mode: "proxy",
+            url: `https://corsproxy.io/?${encodeURIComponent(DATA_URL)}`,
+          },
+        ];
+
+        const errors = [];
+        let fetchedData = null;
+        let usedAttempt = null;
+
+        for (const attempt of attempts) {
+          try {
+            fetchedData = await fetchJsonWithTimeout(attempt.url, FETCH_TIMEOUT_MS);
+            usedAttempt = attempt;
+            break;
+          } catch (err) {
+            const reason = err?.name === "AbortError" ? "Timeout" : (err?.message || "Network/CORS error");
+            errors.push(`${attempt.label}: ${reason}`);
+          }
+        }
+
+        state.isFetching = false;
+        setRefreshingVisual(false);
+        resetRefreshCountdown();
+
+        if (fetchedData && usedAttempt) {
+          state.mode = usedAttempt.mode;
+          state.proxyName = usedAttempt.label;
+          state.rawData = fetchedData;
+          state.results = overall(fetchedData.efforts);
+          state.lastUpdatedAt = Date.now();
+          state.lastErrorMsg = "";
+          renderAll();
+          if (manual) {
+            showToast(usedAttempt.mode === "live" ? "Synced live telemetry" : `Synced via ${usedAttempt.label} proxy`);
+          }
+        } else {
+          state.lastErrorMsg = errors.join(" • ");
+          // Do not wipe Demo Mode if user is actively testing offline sample data,
+          // unless they explicitly clicked Retry / Try Live Endpoint.
+          if (state.mode !== "demo" || manual) {
+            state.mode = state.mode === "demo" && !manual ? "demo" : "error";
+          }
+          renderStatusAndBanners();
+          if (manual) {
+            showToast("Live fetch failed — check network or try Sample Data");
+          }
+        }
+      }
+
+      function loadSampleData() {
+        state.mode = "demo";
+        state.rawData = SAMPLE_DATA;
+        state.results = overall(SAMPLE_DATA.efforts);
+        state.selectedEffortKey = null;
+        state.lastUpdatedAt = Date.now();
+        resetRefreshCountdown();
+        renderAll();
+        showToast("Demo Mode active — viewing offline sample data");
+      }
+
+      /* =========================================================================
+       * 8. LIVE 1-SECOND TIMER & 60-SECOND AUTO-REFRESH SCHEDULER
+       * ========================================================================= */
+      function resetRefreshCountdown() {
+        state.nextRefreshAt = Date.now() + REFRESH_INTERVAL_SEC * 1000;
+        updateTimersUI();
+      }
+
+      function updateTimersUI() {
+        el.lastUpdatedText.textContent = formatRelativeTime(state.lastUpdatedAt);
+
+        const remainingMs = Math.max(0, state.nextRefreshAt - Date.now());
+        const remainingSec = Math.ceil(remainingMs / 1000);
+        el.countdownText.textContent = state.isFetching
+          ? "Syncing now…"
+          : `Next refresh in ${remainingSec}s`;
+
+        const pctRemaining = Math.max(0, Math.min(100, (remainingMs / (REFRESH_INTERVAL_SEC * 1000)) * 100));
+        el.countdownBar.style.width = `${pctRemaining}%`;
+      }
+
+      function setRefreshingVisual(active) {
+        const icons = [el.refreshIcon, el.refreshIconMobile];
+        const btns = [el.refreshBtn, el.refreshBtnMobile];
+        icons.forEach((icon) => {
+          if (!icon) return;
+          icon.classList.toggle("animate-spin", active);
+        });
+        btns.forEach((btn) => {
+          if (!btn) return;
+          btn.disabled = active;
+          btn.classList.toggle("opacity-60", active);
+        });
+      }
+
+      function startClockLoop() {
+        setInterval(() => {
+          updateTimersUI();
+          if (!state.isFetching && Date.now() >= state.nextRefreshAt) {
+            fetchTrackerData({ manual: false });
+          }
+        }, 1000);
+      }
+
+      /* =========================================================================
+       * 9. RENDERING FUNCTIONS
+       * ========================================================================= */
+      function renderStatusAndBanners() {
+        // Status badge styles
+        let badgeClasses = "border-white/10 bg-white/5 text-slate-300";
+        let dotClasses = "bg-slate-400";
+        let label = "Connecting…";
+
+        if (state.mode === "live") {
+          badgeClasses = "border-emerald-400/30 bg-emerald-500/15 text-emerald-300";
+          dotClasses = "bg-emerald-400 animate-pulse";
+          label = "Live";
+        } else if (state.mode === "proxy") {
+          badgeClasses = "border-[#2de2e6]/35 bg-[#2de2e6]/15 text-[#2de2e6]";
+          dotClasses = "bg-[#2de2e6] animate-pulse";
+          label = "Live (via CORS proxy)";
+        } else if (state.mode === "demo") {
+          badgeClasses = "border-[#ff3b9a]/40 bg-[#ff3b9a]/15 text-pink-200";
+          dotClasses = "bg-[#ff3b9a]";
+          label = "Demo Mode";
+        } else if (state.mode === "error") {
+          badgeClasses = "border-rose-500/40 bg-rose-500/15 text-rose-300";
+          dotClasses = "bg-rose-400 animate-pulse";
+          label = "Offline / Error";
+        }
+
+        el.statusBadge.className = `inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-mono font-semibold tracking-wide border ${badgeClasses}`;
+        el.statusDot.className = `w-2 h-2 rounded-full ${dotClasses}`;
+        el.statusLabel.textContent = label;
+
+        // Error & Demo banners
+        if (state.mode === "error") {
+          el.errorBanner.classList.remove("hidden");
+          el.demoBanner.classList.add("hidden");
+          el.errorDetails.textContent = state.lastErrorMsg
+            ? `Unable to fetch live tracker JSON (${state.lastErrorMsg}). Auto-retry continues every 60 seconds.`
+            : "Direct fetch and CORS fallback proxies failed. Auto-retry continues every 60 seconds.";
+        } else if (state.mode === "demo") {
+          el.errorBanner.classList.add("hidden");
+          el.demoBanner.classList.remove("hidden");
+        } else {
+          el.errorBanner.classList.add("hidden");
+          el.demoBanner.classList.add("hidden");
+        }
+      }
+
+      function renderHero() {
+        const res = state.results;
+        if (!res) return;
+
+        const score = res.score;
+        const leader = res.leader;
+        const stage = leader ? leader.reached : "groundwork";
+
+        el.heroPercentage.textContent = `${formatScore(score)}%`;
+        el.heroMilestoneBadge.textContent = stage.toUpperCase();
+        el.heroMilestoneBadge.className = `inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono font-bold uppercase tracking-wider border ${STAGE_STYLES[stage] || STAGE_STYLES.groundwork}`;
+
+        if (leader) {
+          const name = getEffortName(leader.effort);
+          const url = getEffortUrl(leader.effort);
+          el.heroLeaderName.innerHTML = url
+            ? `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" class="hover:text-[#2de2e6] underline decoration-white/25 underline-offset-4 transition">${escapeHtml(name)}</a>`
+            : escapeHtml(name);
+
+          if (leader.stars > 0) {
+            el.heroLeaderStars.textContent = `★ ${formatStars(leader.stars)}`;
+            el.heroLeaderStars.classList.remove("hidden");
+          } else {
+            el.heroLeaderStars.classList.add("hidden");
+          }
+        } else {
+          el.heroLeaderName.textContent = "No active efforts";
+          el.heroLeaderStars.classList.add("hidden");
+        }
+
+        // Optional feed timestamp if present in JSON
+        const feedStamp = state.rawData?.updated || state.rawData?.updatedAt || state.rawData?.lastUpdated || state.rawData?.generated_at;
+        if (feedStamp) {
+          const parsedDate = new Date(feedStamp);
+          if (!Number.isNaN(parsedDate.getTime())) {
+            el.heroFeedUpdated.textContent = `Feed snapshot: ${parsedDate.toLocaleString()}`;
+            el.heroFeedUpdated.classList.remove("hidden");
+          } else {
+            el.heroFeedUpdated.classList.add("hidden");
+          }
+        } else {
+          el.heroFeedUpdated.classList.add("hidden");
+        }
+
+        // Progress bar fill
+        const clampedScore = Math.max(0, Math.min(100, score));
+        el.heroProgressFill.style.width = `${clampedScore}%`;
+
+        // Next milestone helper text
+        const nextMs = MILESTONES.find((m) => m.at > clampedScore);
+        if (nextMs) {
+          const delta = Math.max(0, nextMs.at - clampedScore).toFixed(1);
+          el.heroNextMilestone.textContent = `${delta}% to ${nextMs.label} (${nextMs.at}%)`;
+        } else {
+          el.heroNextMilestone.textContent = "All milestones achieved!";
+        }
+
+        // Render milestone tick marks inside progress track
+        el.milestoneTicksTrack.innerHTML = MILESTONES.filter((m) => m.at > 0 && m.at < 100)
+          .map(
+            (m) =>
+              `<div class="absolute top-0 bottom-0 w-[1.5px] ${clampedScore >= m.at ? "bg-white/45" : "bg-white/15"}" style="left: ${m.at}%"></div>`
+          )
+          .join("");
+
+        // Desktop proportional labeled ticks
+        el.milestoneTicksDesktop.innerHTML = MILESTONES.map((m) => {
+          const reached = clampedScore >= m.at;
+          const isCurrent = stage === m.key;
+          let alignClass = "-translate-x-1/2 text-center";
+          if (m.at === 0) alignClass = "translate-x-0 text-left";
+          if (m.at === 100) alignClass = "-translate-x-full text-right";
+
+          const textClass = isCurrent
+            ? "text-[#ff3b9a] font-bold"
+            : reached
+              ? "text-[#2de2e6] font-semibold"
+              : "text-slate-500";
+
+          return `
+            <div class="absolute top-0 ${alignClass} select-none" style="left: ${m.at}%">
+              <div class="text-[11px] font-mono ${textClass} whitespace-nowrap">${m.at}%</div>
+              <div class="text-[11px] ${isCurrent ? "text-white font-semibold" : reached ? "text-slate-200" : "text-slate-500"} whitespace-nowrap">${m.label}</div>
+            </div>
+          `;
+        }).join("");
+
+        // Mobile clean milestone grid pills
+        el.milestonePillsMobile.innerHTML = MILESTONES.map((m) => {
+          const reached = clampedScore >= m.at;
+          const isCurrent = stage === m.key;
+          const pillStyle = isCurrent
+            ? "border-[#ff3b9a]/50 bg-[#ff3b9a]/15 text-white"
+            : reached
+              ? "border-[#2de2e6]/30 bg-[#2de2e6]/10 text-[#2de2e6]"
+              : "border-white/10 bg-white/[0.02] text-slate-500";
+
+          return `
+            <div class="rounded-xl border px-2 py-1.5 text-center ${pillStyle}">
+              <div class="font-mono text-[10px] font-bold">${m.at}%</div>
+              <div class="text-[10px] truncate">${m.short}</div>
+            </div>
+          `;
+        }).join("");
+      }
+
+      function renderSummaryCards() {
+        const res = state.results;
+        if (!res) return;
+
+        el.statLeaderScore.textContent = `${formatScore(res.score)}%`;
+        el.statTop3Avg.textContent = `${formatScore(res.top3)}%`;
+        el.statActiveCount.textContent = String(res.count);
+
+        if (res.leader) {
+          el.statLeaderStage.textContent = res.leader.reached.toUpperCase();
+          const stageTick = TICK[res.leader.reached] ?? 0;
+          el.statLeaderStageSub.textContent = `Milestone threshold: ${stageTick}%`;
+        } else {
+          el.statLeaderStage.textContent = "—";
+          el.statLeaderStageSub.textContent = "No active efforts";
+        }
+      }
+
+      function getInspectedEntry() {
+        const res = state.results;
+        if (!res || !res.scored.length) return { entry: null, rank: 0, isLeader: true };
+
+        if (state.selectedEffortKey) {
+          const idx = res.scored.findIndex((item, i) => getEffortKey(item.effort, i) === state.selectedEffortKey);
+          if (idx !== -1) {
+            return { entry: res.scored[idx], rank: idx + 1, isLeader: idx === 0 };
+          }
+        }
+        return { entry: res.scored[0], rank: 1, isLeader: true };
+      }
+
+      function renderBreakdown() {
+        const { entry, rank, isLeader } = getInspectedEntry();
+
+        if (!entry) {
+          el.breakdownTargetPill.textContent = "No Effort";
+          el.breakdownEffortName.textContent = "—";
+          el.breakdownScorePill.textContent = "0.0%";
+          el.resetLeaderBtn.classList.add("hidden");
+          el.ladderStepper.innerHTML = "";
+          el.groundworkTracksList.innerHTML = `<p class="text-xs text-slate-500">No effort data available.</p>`;
+          el.qualityTracksList.innerHTML = `<p class="text-xs text-slate-500">No effort data available.</p>`;
+          return;
+        }
+
+        const effort = entry.effort;
+        const name = getEffortName(effort);
+
+        el.breakdownTargetPill.textContent = isLeader ? "#1 Leader" : `Inspecting #${rank}`;
+        el.breakdownTargetPill.className = isLeader
+          ? "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-mono font-semibold bg-[#ff3b9a]/15 text-[#ff3b9a] border border-[#ff3b9a]/30"
+          : "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-mono font-semibold bg-[#2de2e6]/15 text-[#2de2e6] border border-[#2de2e6]/30";
+
+        el.breakdownEffortName.textContent = name;
+        el.breakdownScorePill.textContent = `${formatScore(entry.score)}% (${entry.reached.toUpperCase()})`;
+        el.resetLeaderBtn.classList.toggle("hidden", isLeader);
+
+        // Render Ladder Stepper
+        const gta = effort?.gta || {};
+        let chainIntact = true;
+        el.ladderStepper.innerHTML = LADDER.map((key) => {
+          const rawV = ladderValue(gta[key]);
+          const achieved = chainIntact && rawV >= 1;
+          const partial = chainIntact && !achieved && rawV > 0;
+          if (!achieved) chainIntact = false;
+
+          const cardClass = achieved
+            ? "border-[#2de2e6]/40 bg-[#2de2e6]/10"
+            : partial
+              ? "border-[#ff8a3d]/45 bg-[#ff8a3d]/10"
+              : "border-white/10 bg-white/[0.02]";
+
+          const statusText = achieved
+            ? "DONE"
+            : partial
+              ? `${Math.round(rawV * 100)}%`
+              : rawV > 0
+                ? `${Math.round(rawV * 100)}% (gated)`
+                : "LOCKED";
+
+          const statusColor = achieved
+            ? "text-[#2de2e6]"
+            : partial
+              ? "text-[#ff8a3d]"
+              : "text-slate-500";
+
+          return `
+            <div class="rounded-xl border p-3 ${cardClass}">
+              <div class="flex items-center justify-between gap-1">
+                <span class="text-xs font-semibold capitalize text-white">${key}</span>
+                <span class="font-mono text-[10px] text-slate-400">${TICK[key]}%</span>
+              </div>
+              <div class="mt-2 h-1.5 rounded-full bg-slate-900/90 overflow-hidden">
+                <div class="h-full rounded-full ${achieved ? "bg-[#2de2e6]" : partial ? "bg-[#ff8a3d]" : "bg-slate-700"}" style="width: ${Math.round(rawV * 100)}%"></div>
+              </div>
+              <div class="mt-1.5 font-mono text-[10px] font-semibold ${statusColor}">${statusText}</div>
+            </div>
+          `;
+        }).join("");
+
+        // Render Groundwork Sub-tracks
+        const gwObj = effort?.groundwork || {};
+        const gwPoints = (TICK.loads * entry.gw).toFixed(1);
+        el.gwTotalPct.textContent = formatPercent01(entry.gw);
+        el.gwPointsText.textContent = `${gwPoints} / ${TICK.loads} pts`;
+
+        el.groundworkTracksList.innerHTML = GROUNDWORK.map((g) => {
+          const val = clamp01(gwObj[g.key] ?? 0);
+          const pct = Math.round(val * 100);
+          const weightPct = Math.round(g.weight * 100);
+          return `
+            <div class="space-y-1.5">
+              <div class="flex items-center justify-between gap-2 text-xs">
+                <div class="flex items-center gap-2 min-w-0">
+                  <span class="font-semibold text-slate-100">${g.label}</span>
+                  <span class="font-mono text-[11px] text-slate-400 bg-white/5 px-1.5 py-0.5 rounded-md">${weightPct}% wt</span>
+                </div>
+                <span class="font-mono font-semibold text-[#2de2e6]">${pct}%</span>
+              </div>
+              <div class="h-2.5 rounded-full bg-slate-900/90 border border-white/5 overflow-hidden">
+                <div class="h-full rounded-full bg-gradient-to-r from-[#2de2e6] to-sky-400 transition-all duration-500" style="width: ${pct}%"></div>
+              </div>
+              <p class="text-[11px] text-slate-500">${g.desc}</p>
+            </div>
+          `;
+        }).join("");
+
+        // Render Playability / Quality Tracks
+        const qualityUnlocked = entry.reached === "playable" || entry.reached === "complete";
+        const qualityPts = (entry.quality * (TICK.complete - TICK.playable)).toFixed(1);
+
+        el.qualityTotalPct.textContent = formatPercent01(entry.quality);
+        el.qualityPointsText.textContent = qualityUnlocked
+          ? `+${qualityPts} / 50 pts`
+          : `Potential +${qualityPts} pts`;
+
+        el.qualityActiveBadge.textContent = qualityUnlocked ? "Active" : "Unlocks at Playable";
+        el.qualityActiveBadge.className = qualityUnlocked
+          ? "px-2 py-0.5 rounded-md text-[10px] font-mono font-semibold uppercase tracking-wide bg-emerald-500/15 text-emerald-300 border border-emerald-400/30"
+          : "px-2 py-0.5 rounded-md text-[10px] font-mono font-semibold uppercase tracking-wide bg-white/10 text-slate-400 border border-white/10";
+
+        const rawFps = Number(gta?.fps);
+        const rawStab = gta?.stability;
+        el.qualityStabilityRaw.textContent = `Stability: ${rawStab !== undefined && rawStab !== null && rawStab !== "" ? String(rawStab) : "unknown"}`;
+
+        el.qualityTracksList.innerHTML = TRACKS.map((t) => {
+          const val = entry.tv[t.key] ?? 0;
+          const pct = Math.round(val * 100);
+          const weightPct = Math.round(t.weight * 100);
+
+          let extraDetail = "";
+          if (t.key === "perf") {
+            extraDetail = Number.isFinite(rawFps) && rawFps > 0 ? `${rawFps} FPS • ${pct}%` : `0 FPS • ${pct}%`;
+          } else if (t.key === "stability") {
+            const stabLabel = typeof rawStab === "string" ? rawStab : (typeof rawStab === "number" ? `${Math.round(clamp01(rawStab) * 100)}%` : "unknown");
+            extraDetail = `${stabLabel} • ${pct}%`;
+          } else {
+            extraDetail = `${pct}%`;
+          }
+
+          return `
+            <div class="space-y-1.5">
+              <div class="flex items-center justify-between gap-2 text-xs">
+                <div class="flex items-center gap-2 min-w-0">
+                  <span class="font-semibold text-slate-100">${t.label}</span>
+                  <span class="font-mono text-[11px] text-slate-400 bg-white/5 px-1.5 py-0.5 rounded-md">${weightPct}% wt</span>
+                </div>
+                <span class="font-mono font-semibold text-slate-200">${escapeHtml(extraDetail)}</span>
+              </div>
+              <div class="h-2.5 rounded-full bg-slate-900/90 border border-white/5 overflow-hidden">
+                <div class="h-full rounded-full bg-gradient-to-r ${t.color} transition-all duration-500 ${qualityUnlocked ? "" : "opacity-65"}" style="width: ${pct}%"></div>
+              </div>
+              <p class="text-[11px] text-slate-500">${t.desc}</p>
+            </div>
+          `;
+        }).join("");
+      }
+
+      function renderLeaderboard() {
+        const res = state.results;
+        const allItems = res ? res.scored : [];
+        const query = state.searchQuery.trim().toLowerCase();
+
+        const indexed = allItems.map((item, idx) => ({
+          item,
+          rank: idx + 1,
+          key: getEffortKey(item.effort, idx),
+        }));
+
+        const filtered = query
+          ? indexed.filter(({ item }) => {
+              const haystack = `${getEffortName(item.effort)} ${getEffortSubtitle(item.effort)} ${item.reached}`.toLowerCase();
+              return haystack.includes(query);
+            })
+          : indexed;
+
+        el.leaderboardCountPill.textContent = String(filtered.length);
+
+        const inspected = getInspectedEntry();
+        const activeKey = inspected.entry ? getEffortKey(inspected.entry.effort, inspected.rank - 1) : null;
+
+        if (!filtered.length) {
+          el.leaderboardTableBody.innerHTML = "";
+          el.leaderboardMobileList.innerHTML = "";
+          el.leaderboardEmpty.classList.remove("hidden");
+          return;
+        }
+        el.leaderboardEmpty.classList.add("hidden");
+
+        // Desktop table rows
+        el.leaderboardTableBody.innerHTML = filtered
+          .map(({ item, rank, key }) => {
+            const name = getEffortName(item.effort);
+            const subtitle = getEffortSubtitle(item.effort);
+            const url = getEffortUrl(item.effort);
+            const isSelected = key === activeKey;
+            const fpsNum = Number(item.effort?.gta?.fps);
+            const fpsDisplay = Number.isFinite(fpsNum) && fpsNum > 0 ? `${fpsNum} FPS` : "—";
+            const stageBadgeClass = STAGE_STYLES[item.reached] || STAGE_STYLES.groundwork;
+
+            const rankBadge =
+              rank === 1
+                ? `<span class="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-[#ff3b9a]/20 text-[#ff3b9a] border border-[#ff3b9a]/40 font-mono font-bold text-xs">#1</span>`
+                : rank === 2
+                  ? `<span class="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-[#ff8a3d]/15 text-[#ff8a3d] border border-[#ff8a3d]/35 font-mono font-bold text-xs">#2</span>`
+                  : rank === 3
+                    ? `<span class="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-[#2de2e6]/15 text-[#2de2e6] border border-[#2de2e6]/35 font-mono font-bold text-xs">#3</span>`
+                    : `<span class="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-white/5 text-slate-400 font-mono text-xs">#${rank}</span>`;
+
+            return `
+              <tr
+                data-effort-key="${escapeHtml(key)}"
+                class="effort-row cursor-pointer transition ${isSelected ? "bg-[#2de2e6]/[0.08]" : "hover:bg-white/[0.04]"}"
+              >
+                <td class="py-3.5 pl-6 pr-3 align-middle">${rankBadge}</td>
+                <td class="py-3.5 px-3 align-middle max-w-xs">
+                  <div class="flex items-center gap-2">
+                    <span class="font-semibold text-white truncate">${escapeHtml(name)}</span>
+                    ${
+                      url
+                        ? `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" class="effort-ext-link flex-shrink-0 text-slate-400 hover:text-[#2de2e6] transition p-1 rounded-md hover:bg-white/5" title="Open project link" aria-label="Open ${escapeHtml(name)}">
+                            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                              <path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                            </svg>
+                          </a>`
+                        : ""
+                    }
+                    ${isSelected ? `<span class="text-[10px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded bg-[#2de2e6]/20 text-[#2de2e6]">Inspecting</span>` : ""}
+                  </div>
+                  ${subtitle ? `<p class="text-xs text-slate-400 truncate mt-0.5">${escapeHtml(subtitle)}</p>` : ""}
+                </td>
+                <td class="py-3.5 px-3 align-middle">
+                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-mono font-semibold uppercase tracking-wide border ${stageBadgeClass}">
+                    ${escapeHtml(item.reached)}
+                  </span>
+                </td>
+                <td class="py-3.5 px-3 align-middle text-right font-mono text-xs text-slate-300">
+                  ${escapeHtml(fpsDisplay)}
+                </td>
+                <td class="py-3.5 px-3 align-middle text-right font-mono text-xs text-amber-300">
+                  ${item.stars > 0 ? `★ ${formatStars(item.stars)}` : "<span class='text-slate-600'>—</span>"}
+                </td>
+                <td class="py-3.5 pl-3 pr-6 align-middle">
+                  <div class="flex items-center justify-end gap-3">
+                    <div class="w-28 h-2 rounded-full bg-slate-900 border border-white/5 overflow-hidden">
+                      <div class="h-full rounded-full bg-gradient-to-r from-[#2de2e6] via-[#ff8a3d] to-[#ff3b9a]" style="width: ${Math.max(0, Math.min(100, item.score))}%"></div>
+                    </div>
+                    <span class="font-mono font-bold text-sm text-white w-14 text-right">${formatScore(item.score)}%</span>
+                  </div>
+                </td>
+              </tr>
+            `;
+          })
+          .join("");
+
+        // Mobile card list
+        el.leaderboardMobileList.innerHTML = filtered
+          .map(({ item, rank, key }) => {
+            const name = getEffortName(item.effort);
+            const subtitle = getEffortSubtitle(item.effort);
+            const url = getEffortUrl(item.effort);
+            const isSelected = key === activeKey;
+            const fpsNum = Number(item.effort?.gta?.fps);
+            const fpsDisplay = Number.isFinite(fpsNum) && fpsNum > 0 ? `${fpsNum} FPS` : null;
+            const stageBadgeClass = STAGE_STYLES[item.reached] || STAGE_STYLES.groundwork;
+
+            return `
+              <div
+                data-effort-key="${escapeHtml(key)}"
+                class="effort-row p-4 cursor-pointer transition ${isSelected ? "bg-[#2de2e6]/[0.08]" : "active:bg-white/[0.04]"}"
+              >
+                <div class="flex items-start justify-between gap-3">
+                  <div class="min-w-0">
+                    <div class="flex items-center gap-2 flex-wrap">
+                      <span class="font-mono text-xs font-bold text-slate-400">#${rank}</span>
+                      <span class="font-semibold text-sm text-white truncate">${escapeHtml(name)}</span>
+                      ${
+                        url
+                          ? `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" class="effort-ext-link text-slate-400 hover:text-[#2de2e6] p-1" aria-label="Open ${escapeHtml(name)}">
+                              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                              </svg>
+                            </a>`
+                          : ""
+                      }
+                    </div>
+                    ${subtitle ? `<p class="text-xs text-slate-400 line-clamp-1 mt-0.5">${escapeHtml(subtitle)}</p>` : ""}
+                  </div>
+                  <div class="font-display font-extrabold text-lg text-white flex-shrink-0">${formatScore(item.score)}%</div>
+                </div>
+
+                <div class="mt-3 h-2 rounded-full bg-slate-900 border border-white/5 overflow-hidden">
+                  <div class="h-full rounded-full bg-gradient-to-r from-[#2de2e6] via-[#ff8a3d] to-[#ff3b9a]" style="width: ${Math.max(0, Math.min(100, item.score))}%"></div>
+                </div>
+
+                <div class="mt-2.5 flex items-center justify-between gap-2 text-xs">
+                  <div class="flex items-center gap-2">
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold uppercase border ${stageBadgeClass}">
+                      ${escapeHtml(item.reached)}
+                    </span>
+                    ${fpsDisplay ? `<span class="font-mono text-[11px] text-slate-300">${escapeHtml(fpsDisplay)}</span>` : ""}
+                  </div>
+                  <div class="flex items-center gap-2 font-mono text-[11px]">
+                    ${item.stars > 0 ? `<span class="text-amber-300">★ ${formatStars(item.stars)}</span>` : ""}
+                    ${isSelected ? `<span class="text-[#2de2e6]">Inspecting</span>` : `<span class="text-slate-500">Tap to inspect</span>`}
+                  </div>
+                </div>
+              </div>
+            `;
+          })
+          .join("");
+      }
+
+      function renderAll() {
+        renderStatusAndBanners();
+        renderHero();
+        renderSummaryCards();
+        renderBreakdown();
+        renderLeaderboard();
+        updateTimersUI();
+      }
+
+      /* =========================================================================
+       * 10. CLIPBOARD COPY HELPER (Iframe-safe via execCommand)
+       * ========================================================================= */
+      function copyStatusSummary() {
+        if (!state.results) {
+          showToast("No telemetry loaded yet");
+          return;
+        }
+        const r = state.results;
+        const leaderName = r.leader ? getEffortName(r.leader.effort) : "N/A";
+        const stage = r.leader ? r.leader.reached.toUpperCase() : "N/A";
+        const text = `GTA VI Port Progress: ${formatScore(r.score)}% (${stage}) | Leader: ${leaderName} | Top 3 Avg: ${formatScore(r.top3)}% | Active Efforts: ${r.count} | Source: portwatch-vi.xyz`;
+
+        const textarea = document.createElement("textarea");
+        textarea.value = text;
+        textarea.setAttribute("readonly", "");
+        textarea.className = "fixed -left-[9999px] top-0 opacity-0";
+        document.body.appendChild(textarea);
+        textarea.select();
+        try {
+          document.execCommand("copy");
+          el.copySummaryLabel.textContent = "Copied!";
+          showToast("Status summary copied to clipboard");
+          setTimeout(() => {
+            el.copySummaryLabel.textContent = "Copy Status";
+          }, 2000);
+        } catch (err) {
+          showToast("Unable to copy to clipboard");
+        } finally {
+          document.body.removeChild(textarea);
+        }
+      }
+
+      /* =========================================================================
+       * 11. EVENT LISTENERS & INITIALIZATION
+       * ========================================================================= */
+      function bindEvents() {
+        el.refreshBtn.addEventListener("click", () => fetchTrackerData({ manual: true }));
+        el.refreshBtnMobile.addEventListener("click", () => fetchTrackerData({ manual: true }));
+        el.retryNowBtn.addEventListener("click", () => fetchTrackerData({ manual: true }));
+        el.demoReconnectBtn.addEventListener("click", () => fetchTrackerData({ manual: true }));
+        el.loadSampleBtn.addEventListener("click", loadSampleData);
+        el.copySummaryBtn.addEventListener("click", copyStatusSummary);
+
+        el.resetLeaderBtn.addEventListener("click", () => {
+          state.selectedEffortKey = null;
+          renderBreakdown();
+          renderLeaderboard();
+        });
+
+        el.effortSearch.addEventListener("input", (e) => {
+          state.searchQuery = e.target.value || "";
+          renderLeaderboard();
+        });
+
+        // Delegate click on leaderboard rows (desktop & mobile)
+        const handleRowClick = (e) => {
+          if (e.target.closest(".effort-ext-link")) return;
+          const row = e.target.closest(".effort-row");
+          if (!row) return;
+          const key = row.getAttribute("data-effort-key");
+          if (!key) return;
+          state.selectedEffortKey = key;
+          renderBreakdown();
+          renderLeaderboard();
+          el.breakdownSection.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        };
+
+        el.leaderboardTableBody.addEventListener("click", handleRowClick);
+        el.leaderboardMobileList.addEventListener("click", handleRowClick);
+      }
+
+      function init() {
+        bindEvents();
+        startClockLoop();
+        fetchTrackerData({ manual: false });
+      }
+
+      window.addEventListener("DOMContentLoaded", init);
+    })();
+  </script>
+</body>
+</html>
